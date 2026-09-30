@@ -1,7 +1,9 @@
 """Apply scripts/github/issues.yml to a GitHub repository with the gh CLI.
 
 Idempotent: labels are upserted, milestones matched by title, issues matched by a hidden
-`<!-- issue-id: Mx-yy -->` marker (fallback: title). Re-running only fixes drift.
+`<!-- issue-id: Mx-yy -->` marker (fallback: title). Existing issues are never rewritten
+(labels, milestone and body edited on GitHub are kept); a re-run only creates what is
+missing, resolves pending cross-references and adds missing assignees.
 
 Default mode is a DRY RUN that prints a summary. Use --apply to change anything.
 Run through scripts/github/bootstrap.sh (handles the Python/uv environment).
@@ -267,25 +269,26 @@ def ensure_issues(repo: str, plan: dict, ms_titles: dict[str, str]) -> dict[str,
                 "Livré lors de l'initialisation du projet.",
             )
 
-    # Pass 2: resolve cross-references ({{Mx-yy}} -> #n), fix drift and missing assignees
+    # Pass 2: resolve cross-references ({{Mx-yy}} -> #n) that pointed to issues created later.
+    # Only placeholders are replaced, so edits made on GitHub (ticked boxes...) are preserved.
+    def resolve(match: re.Match) -> str:
+        issue_id = match.group(1)
+        return f"#{numbers[issue_id]}" if issue_id in numbers else match.group(0)
+
     for issue in plan["issues"]:
         gi = found[issue["id"]]
-        body = render_body(issue, numbers)
-        if gi.get("body") != body:
-            gh("issue", "edit", str(gi["number"]), "--repo", repo, "--body-file", "-", input_data=body)
-            if not gi.get("new"):
-                print(f"  ~ #{gi['number']} corps mis à jour")
+        current = gi.get("body") or ""
+        resolved = REF.sub(resolve, current)
+        if resolved != current:
+            gh("issue", "edit", str(gi["number"]), "--repo", repo, "--body-file", "-", input_data=resolved)
         assignee = people[issue["assignee"]]
         if not gi.get("new") and not any(a["login"] == assignee for a in gi.get("assignees", [])):
-            ok = (
-                subprocess.run(
-                    ["gh", "issue", "edit", str(gi["number"]), "--repo", repo, "--add-assignee", assignee],
-                    capture_output=True,
-                    text=True,
-                ).returncode
-                == 0
+            result = subprocess.run(
+                ["gh", "issue", "edit", str(gi["number"]), "--repo", repo, "--add-assignee", assignee],
+                capture_output=True,
+                text=True,
             )
-            if ok:
+            if result.returncode == 0:
                 print(f"  ~ #{gi['number']} assignée à {assignee}")
     return found
 
