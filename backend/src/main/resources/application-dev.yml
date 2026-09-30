@@ -1,0 +1,15 @@
+# Local development profile. Must never be enabled in production.
+logging:
+  level:
+    sn.ept.supporthub: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+spring:
+  devtools:
+    restart:
+      poll-interval: 2s
+      quiet-period: 1s
