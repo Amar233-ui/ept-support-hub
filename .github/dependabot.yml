@@ -1,4 +1,9 @@
 version: 2
+
+# Majors that contradict our ADRs or pinned runtimes are ignored:
+# - Spring Boot stays on 3.5.x (ADR 0005), so springdoc stays on 2.x;
+# - Java 21, Python 3.12 (ML wheels) and Node 24 LTS base images.
+# Minor and patch updates are welcome.
 updates:
   - package-ecosystem: maven
     directory: /backend
@@ -6,19 +11,35 @@ updates:
     open-pull-requests-limit: 5
     groups:
       spring: { patterns: ["org.springframework*"] }
+    ignore:
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springdoc:*"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly, day: monday }
     open-pull-requests-limit: 5
     groups:
-      dev-deps: { dependency-type: development }
+      dev-deps: { dependency-type: development, update-types: ["minor", "patch"] }
+
   - package-ecosystem: pip
     directory: /ai-service
     schedule: { interval: weekly, day: monday }
     open-pull-requests-limit: 5
+
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+
   - package-ecosystem: docker
     directories: [/backend, /frontend, /ai-service]
     schedule: { interval: monthly }
+    ignore:
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

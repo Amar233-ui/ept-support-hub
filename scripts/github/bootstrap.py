@@ -16,6 +16,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -36,8 +37,20 @@ REF = re.compile(r"\{\{(M\d-\d{2})\}\}")
 
 
 # --------------------------------------------------------------------------- gh helpers
+NETWORK_ERRORS = ("error connecting", "timeout", "connection", "EOF", "502", "503", "504")
+
+
 def gh(*args: str, input_data: str | None = None, check: bool = True) -> str:
-    result = subprocess.run(["gh", *args], input=input_data, capture_output=True, text=True, encoding="utf-8")
+    # Network hiccups are retried, except for issue creation where a lost response could
+    # create a duplicate (a re-run of the script will pick up anything missing instead).
+    retries = 1 if args[:2] == ("issue", "create") else 5
+    for attempt in range(1, retries + 1):
+        result = subprocess.run(["gh", *args], input=input_data, capture_output=True, text=True, encoding="utf-8")
+        if result.returncode == 0 or not any(e in result.stderr for e in NETWORK_ERRORS):
+            break
+        if attempt < retries:
+            print(f"    … erreur réseau, nouvelle tentative ({attempt}/{retries - 1})")
+            time.sleep(5 * attempt)
     if check and result.returncode != 0:
         raise RuntimeError(f"gh {' '.join(args[:3])}… failed:\n{result.stderr.strip()}")
     return result.stdout
