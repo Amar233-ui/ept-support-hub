@@ -1,0 +1,68 @@
+/*
+ * Design tokens — single source of truth for colors (see docs/design-system.md).
+ * Components must never hardcode colors: use the Tailwind utilities mapped in main.css.
+ * All text/background pairs below meet WCAG AA (4.5:1) except --fg-subtle, reserved
+ * for placeholders and decorative metadata.
+ */
+:root {
+  /* Warm neutrals */
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --surface-muted: #f4f2ee;
+  --surface-hover: #efece7;
+  --border: #e7e4de;
+  --border-strong: #d6d2ca;
+
+  --fg: #1c1b19;
+  --fg-muted: #5f5b54;
+  --fg-subtle: #8a857c;
+
+  /* Single accent: EPT green */
+  --accent: #1f6b4f;
+  --accent-hover: #185a42;
+  --accent-fg: #ffffff;
+  --accent-soft: #e4efe9;
+  --focus-ring: #1f6b4f;
+
+  /* Semantic (status, priority, SLA) — used sparingly */
+  --success: #2f7d4a;
+  --success-soft: #e6f2ea;
+  --warning: #9a5b00;
+  --warning-soft: #fbf0dc;
+  --danger: #b42318;
+  --danger-soft: #fbe9e7;
+  --info: #2759a8;
+  --info-soft: #e7eef9;
+
+  --shadow-overlay: 0 1px 2px rgb(28 27 25 / 0.06), 0 12px 32px -8px rgb(28 27 25 / 0.18);
+}
+
+.dark {
+  --bg: #161513;
+  --surface: #1d1c1a;
+  --surface-muted: #252320;
+  --surface-hover: #2b2926;
+  --border: #33302c;
+  --border-strong: #45413b;
+
+  --fg: #edebe7;
+  --fg-muted: #a8a39a;
+  --fg-subtle: #7a756d;
+
+  --accent: #4fb98c;
+  --accent-hover: #6bc9a0;
+  --accent-fg: #0e1f18;
+  --accent-soft: #173229;
+  --focus-ring: #6bc9a0;
+
+  --success: #5cbf7c;
+  --success-soft: #183022;
+  --warning: #e0a043;
+  --warning-soft: #33261a;
+  --danger: #f07167;
+  --danger-soft: #3a1c19;
+  --info: #7aa7ec;
+  --info-soft: #1a2638;
+
+  --shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -8px rgb(0 0 0 / 0.6);
+}
