@@ -1,0 +1,52 @@
+name: Docker images
+
+# Builds the production images of changed services (no push yet: registry
+# publication is part of the deployment issue in M7).
+on:
+  pull_request:
+    paths: ['backend/**', 'frontend/**', 'ai-service/**', 'infra/**', '.github/workflows/docker.yml']
+  push:
+    branches: [main]
+    paths: ['backend/**', 'frontend/**', 'ai-service/**', 'infra/**', '.github/workflows/docker.yml']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend: ['backend/**']
+            frontend: ['frontend/**']
+            ai-service: ['ai-service/**']
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build ${{ matrix.service }} (prod target)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          target: prod
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

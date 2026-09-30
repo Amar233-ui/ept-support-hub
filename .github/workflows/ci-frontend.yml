@@ -1,0 +1,61 @@
+name: CI frontend
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ['frontend/**', 'docs/openapi.json', '.github/workflows/ci-frontend.yml']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend: ['frontend/**', 'docs/openapi.json', '.github/workflows/ci-frontend.yml']
+
+  frontend:
+    needs: changes
+    # Skipped jobs count as success for required checks, so unrelated PRs are not blocked.
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Lint (ESLint + Prettier)
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: API types are up to date with docs/openapi.json
+        if: hashFiles('docs/openapi.json') != ''
+        run: npm run api-types && git diff --exit-code src/api/schema.d.ts
+      - name: Unit tests + coverage
+        run: npm run coverage
+      - name: Coverage report on PR
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          working-directory: frontend
+      - name: Build
+        run: npm run build

@@ -1,0 +1,47 @@
+name: CI ai-service
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ['ai-service/**', '.github/workflows/ci-ai.yml']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.filter.outputs.ai }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ai: ['ai-service/**', '.github/workflows/ci-ai.yml']
+
+  ai-service:
+    needs: changes
+    # Skipped jobs count as success for required checks, so unrelated PRs are not blocked.
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: ai-service/uv.lock
+      - run: uv sync --frozen
+      - name: Lint (ruff)
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Tests + coverage
+        run: uv run pytest --cov=app --cov-report=term-missing
