@@ -1,0 +1,96 @@
+# Development stack. Usage: cp .env.example .env && make up
+# Production stack: infra/docker-compose.prod.yml
+name: ept-support-hub
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-supporthub}
+      POSTGRES_USER: ${POSTGRES_USER:-supporthub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supporthub}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  ai-service:
+    build:
+      context: ./ai-service
+      target: dev
+    env_file: .env
+    environment:
+      AI_ENV: dev
+      AI_DATABASE_URL: postgresql://${POSTGRES_USER:-supporthub}:${POSTGRES_PASSWORD:-supporthub}@postgres:5432/${POSTGRES_DB:-supporthub}
+    ports:
+      - "${AI_SERVICE_PORT:-8000}:8000"
+    volumes:
+      - ./ai-service/app:/app/app
+      - models-cache:/models-cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    env_file: .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-supporthub}
+      DB_USER: ${POSTGRES_USER:-supporthub}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-supporthub}
+      APP_STORAGE_DIR: /data/storage
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - ./backend/src:/app/src
+      - m2-cache:/root/.m2
+      - storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      # Vite proxies /api and /ws to the backend container
+      VITE_PROXY_TARGET: http://backend:8080
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  storage:
+  models-cache:
+  m2-cache:
+  frontend-node-modules:

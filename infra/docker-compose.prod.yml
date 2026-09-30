@@ -1,0 +1,94 @@
+# Production stack. From the repo root:
+#   docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --build
+# Only Nginx publishes a port; everything else stays on the internal network.
+name: ept-support-hub-prod
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  ai-service:
+    build:
+      context: ../ai-service
+      target: prod
+    restart: unless-stopped
+    environment:
+      AI_ENV: prod
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:?}
+      AI_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - models-cache:/models-cache
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ../backend
+      target: prod
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      AI_SERVICE_URL: http://ai-service:8000
+      APP_STORAGE_DIR: /data/storage
+    volumes:
+      - storage:/data/storage
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started # the backend must start even if the AI is down
+
+  frontend:
+    build:
+      context: ../frontend
+      target: prod
+    restart: unless-stopped
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [internal]
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+networks:
+  internal:
+
+volumes:
+  pgdata:
+  storage:
+  models-cache:
