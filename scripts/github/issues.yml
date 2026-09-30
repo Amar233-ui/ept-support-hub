@@ -1,0 +1,1774 @@
+# Source de vérité de la planification GitHub (labels, milestones, issues).
+# Appliqué par scripts/github/bootstrap.sh (idempotent : une issue est identifiée par son titre).
+#
+# Champs d'une issue :
+#   id        identifiant stable (M3-07), utilisable dans related: / depends:
+#   type      feature | bug | task | docs | design        -> label type:*
+#   area      liste parmi backend, frontend, ai, infra, docs -> labels area:*
+#   prio      high | medium | low                         -> label prio:*
+#   size      S (≤ 0,5 j) | M (≈ 1 j) | L (≈ 2 j)         -> label size:*
+#   assignee  pseudo GitHub
+#   done      true si déjà livré (l'issue est créée puis fermée, pour la traçabilité)
+#   related   issues liées (paire back/front, relecture croisée)
+#   depends   issues bloquantes
+#   extra_labels  ex. ["good first issue"]
+
+people:
+  A: Amar233-ui    # Mame Goumba Amar — backend cœur, infra
+  F: falloungom04  # Serigne Fallou Ngom — frontend, design system, IA
+
+labels:
+  - { name: "type:feature", color: "1F6B4F", description: "Nouvelle fonctionnalité" }
+  - { name: "type:bug", color: "B42318", description: "Comportement incorrect" }
+  - { name: "type:task", color: "5F5B54", description: "Tâche technique, outillage, infra" }
+  - { name: "type:docs", color: "2759A8", description: "Documentation" }
+  - { name: "type:design", color: "8E4EC6", description: "Design, UX, maquettes" }
+  - { name: "area:backend", color: "D4C5A9", description: "Spring Boot" }
+  - { name: "area:frontend", color: "C5DDD1", description: "Vue 3" }
+  - { name: "area:ai", color: "E6D3F5", description: "Micro-service IA Python" }
+  - { name: "area:infra", color: "D6D2CA", description: "Docker, CI, déploiement" }
+  - { name: "area:docs", color: "C9D8F0", description: "docs/, README, guides" }
+  - { name: "prio:high", color: "B42318", description: "Bloquant pour le milestone" }
+  - { name: "prio:medium", color: "E0A043", description: "Important" }
+  - { name: "prio:low", color: "A8A39A", description: "Souhaitable" }
+  - { name: "size:S", color: "EDEBE7", description: "≤ 0,5 jour" }
+  - { name: "size:M", color: "D6D2CA", description: "≈ 1 jour" }
+  - { name: "size:L", color: "A8A39A", description: "≈ 2 jours (sinon découper)" }
+  - { name: "good first issue", color: "7057FF", description: "Bon point d'entrée" }
+  - { name: "blocked", color: "000000", description: "Bloquée par une dépendance externe ou une autre issue" }
+
+milestones:
+  - key: M0
+    title: "M0 — Fondations"
+    due: "2026-10-11"
+    description: "Repo, Docker, CI, conventions, squelettes des 3 services qui démarrent, tokens de design, CLAUDE.md."
+  - key: M1
+    title: "M1 — Conception"
+    due: "2026-10-25"
+    description: "UML, modèle de données + migrations Flyway initiales, composants de base du design system, contrat OpenAPI v1, ADR."
+  - key: M2
+    title: "M2 — Auth & organisation"
+    due: "2026-11-08"
+    description: "Google OAuth @ept.sn, validation des comptes, rôles, services, zones, administration des comptes, login dev."
+  - key: M3
+    title: "M3 — Tickets cœur"
+    due: "2026-11-29"
+    description: "CRUD, machine à états, commentaires, pièces jointes, historique, SLA, notifications in-app + email."
+  - key: M4
+    title: "M4 — IA v1"
+    due: "2026-12-06"
+    description: "Classification, routage, suggestion d'assignation, corrélation par zone, jeu de données, intégration résiliente. Milestone court : le travail IA (jeu de données, modèle) démarre en parallèle dès M2."
+  - key: M5
+    title: "M5 — Pilotage"
+    due: "2026-12-13"
+    description: "Dashboards par rôle, rapports PDF, besoins temporaires, journal d'audit."
+  - key: M6
+    title: "M6 — Modules étendus (stretch)"
+    due: "2026-12-20"
+    description: "STRETCH : module vigiles, speech-to-text, WhatsApp (feature flag). À ne commencer que si M0 à M5 sont terminés ; sinon présenté comme piste v2."
+  - key: M7
+    title: "M7 — Recette & livraison"
+    due: "2026-12-29"
+    description: "Tests e2e des parcours clés, perf de base, sécurité (OWASP Top 10), déploiement prod, guides, données de démo, support de soutenance (2027-01-01)."
+
+issues:
+  # ===========================================================================
+  # M0 — Fondations
+  # ===========================================================================
+  - id: M0-01
+    title: "Initialiser le monorepo et les conventions"
+    milestone: M0
+    type: task
+    area: [infra, docs]
+    prio: high
+    size: M
+    assignee: A
+    done: true
+    context: Poser la structure du monorepo et les conventions partagées par le binôme.
+    criteria:
+      - Arborescence backend/, frontend/, ai-service/, infra/, docs/, scripts/
+      - .editorconfig, .gitignore, .gitattributes
+      - CONTRIBUTING.md (workflow, Conventional Commits, Definition of Done)
+      - Templates d'issues et de PR, CODEOWNERS, dependabot
+      - CLAUDE.md décrivant architecture, conventions et commandes
+
+  - id: M0-02
+    title: "Squelette backend Spring Boot avec endpoint health"
+    milestone: M0
+    type: task
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    done: true
+    context: Backend Spring Boot 3.5 / Java 21 qui démarre, avec package par fonctionnalité et test d'intégration réel.
+    criteria:
+      - GET /api/health public, tout le reste exige une authentification
+      - Flyway V1 active pgvector et pg_trgm
+      - Test d'intégration Testcontainers (image pgvector/pgvector:pg16)
+      - Spotless (palantir-java-format) et JaCoCo configurés
+      - Dockerfile multi-stage (dev hot reload, prod JRE non-root, HEALTHCHECK)
+
+  - id: M0-03
+    title: "Squelette service IA FastAPI avec endpoint health"
+    milestone: M0
+    type: task
+    area: [ai]
+    prio: high
+    size: S
+    assignee: F
+    done: true
+    context: Micro-service FastAPI minimal, sans dépendances ML lourdes (ajoutées en M4).
+    criteria:
+      - GET /health
+      - Projet uv (Python 3.12), ruff, pytest
+      - Dockerfile multi-stage non-root avec HEALTHCHECK
+
+  - id: M0-04
+    title: "Squelette frontend : layout, tokens de design et mode sombre"
+    milestone: M0
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    done: true
+    context: Vue 3 + Vite + TS avec la coquille de l'application et le design system de base.
+    criteria:
+      - Sidebar repliable (drawer sur mobile), topbar, palette Ctrl/⌘ K
+      - Tokens CSS clair/sombre (accent vert EPT) exposés à Tailwind v4
+      - Composants UiButton, UiBadge, UiCard, UiEmptyState, UiSkeleton, UiKbd
+      - Page /dev/ui (dev uniquement)
+      - Vitest + ESLint + Prettier
+
+  - id: M0-05
+    title: "Docker Compose de dev, Makefile et .env.example"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: high
+    size: M
+    assignee: A
+    done: true
+    context: Un nouveau venu fait `cp .env.example .env && make up` et tout tourne.
+    criteria:
+      - postgres (pgvector), mailpit, ai-service, backend, frontend avec healthchecks
+      - depends_on avec condition service_healthy, volumes nommés
+      - Hot reload des 3 services
+      - Makefile (up, down, logs, test, lint, format, reset-db, psql, api-types)
+      - .env.example exhaustif et commenté
+
+  - id: M0-06
+    title: "CI GitHub Actions pour les 3 services et build des images"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: high
+    size: M
+    assignee: A
+    done: true
+    context: La CI bloque le merge si les tests ou le lint échouent.
+    criteria:
+      - ci-backend, ci-frontend, ci-ai, docker (build des cibles prod)
+      - Filtrage par chemin au niveau des jobs (les checks obligatoires rapportent toujours)
+      - Rapport de couverture commenté sur les PR (backend, frontend)
+
+  - id: M0-07
+    title: "Documentation initiale : architecture et premiers ADR"
+    milestone: M0
+    type: docs
+    area: [docs]
+    prio: medium
+    size: M
+    assignee: A
+    done: true
+    context: Base documentaire pour la soutenance et pour les sessions suivantes.
+    criteria:
+      - docs/architecture.md (C4 niveaux 1-2 en Mermaid, flux principaux)
+      - ADR 0001 monorepo, 0002 pgvector, 0003 STOMP, 0004 cookie HttpOnly, 0005 Spring Boot 3.5
+      - design-system.md, ai.md, api.md, setup-google-oauth.md, setup-whatsapp.md, deployment.md
+
+  - id: M0-08
+    title: "Vérifier le démarrage complet de la stack sur le poste de chaque binôme"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: high
+    size: S
+    assignee: F
+    extra_labels: ["good first issue"]
+    context: S'assurer que `make up` (ou `docker compose up -d --build`) fonctionne sur chaque machine, en particulier sous Windows.
+    criteria:
+      - Les 5 conteneurs passent healthy sur la machine de Fallou
+      - Frontend, Swagger, docs IA et Mailpit accessibles
+      - Hot reload vérifié sur une modification dans chaque service
+      - Toute difficulté rencontrée est documentée dans le README (section Dépannage)
+
+  - id: M0-09
+    title: "Première PR de bout en bout : hooks, review croisée, CI verte"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: high
+    size: S
+    assignee: F
+    extra_labels: ["good first issue"]
+    related: [M0-08]
+    context: Valider le workflow Git complet avant de démarrer les fonctionnalités.
+    criteria:
+      - "`make setup` installe les hooks lefthook (format + lint + message de commit)"
+      - Une PR ouverte par chaque binôme, relue et approuvée par l'autre
+      - Les checks backend, frontend et ai-service apparaissent et bloquent si rouges
+      - Squash merge sur main protégée
+
+  - id: M0-10
+    title: "Créer le projet Google Cloud et les clients OAuth dev et prod"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: high
+    size: S
+    assignee: A
+    context: "Délai potentiel côté CRI (écran de consentement Interne, compte @ept.sn membre de l'organisation Workspace) : à lancer tôt. Voir docs/setup-google-oauth.md."
+    criteria:
+      - Projet GCP créé avec un compte @ept.sn, écran de consentement de type Interne
+      - Client OAuth dev (redirect http://localhost:5173/api/login/oauth2/code/google)
+      - Identifiants partagés de façon sécurisée avec le binôme (jamais dans le repo)
+      - Client prod créé ou demande faite au CRI
+
+  - id: M0-11
+    title: "Valider la palette, la typographie et les contrastes"
+    milestone: M0
+    type: design
+    area: [frontend]
+    prio: medium
+    size: S
+    assignee: F
+    context: Valider le design system de base avant de multiplier les écrans.
+    criteria:
+      - Captures de /dev/ui en clair et en sombre, jointes à l'issue
+      - Contrastes AA vérifiés (outil type WebAIM) pour fg, fg-muted et accent sur canvas et surface
+      - Ajustements éventuels reportés dans tokens.css et docs/design-system.md
+
+  - id: M0-12
+    title: "Collecter des exemples d'incidents réels auprès du CRI et du ServTech"
+    milestone: M0
+    type: task
+    area: [ai]
+    prio: medium
+    size: M
+    assignee: F
+    context: Le jeu de données de seed et l'IA seront bien plus crédibles avec de vrais cas (formulations, zones, causes racines). À démarrer tout de suite.
+    criteria:
+      - Entretien avec le CRI et le Service Technique (30 min chacun)
+      - Au moins 40 incidents réels anonymisés (description, zone, catégorie, cause)
+      - Liste des zones réelles de l'EPT (blocs, salles, bureaux)
+      - Stocké dans scripts/seed/raw/ (sans donnée personnelle)
+
+  - id: M0-13
+    title: "Demander au CRI un hébergement cible et un nom de domaine"
+    milestone: M0
+    type: task
+    area: [infra]
+    prio: medium
+    size: S
+    assignee: A
+    context: Le déploiement a lieu en M7, mais les demandes d'infrastructure prennent du temps.
+    criteria:
+      - Demande écrite au CRI (VM Linux 4-8 Go, Docker, sous-domaine type support.ept.sn, TLS)
+      - Réponse et contraintes consignées dans docs/deployment.md
+      - Plan B identifié (VPS étudiant, machine de démo) si refus
+
+  # ===========================================================================
+  # M1 — Conception
+  # ===========================================================================
+  - id: M1-01
+    title: "Diagramme de cas d'utilisation"
+    milestone: M1
+    type: docs
+    area: [docs]
+    prio: high
+    size: M
+    assignee: F
+    context: Cas d'utilisation par acteur (usager, vigile, technicien N1/N2, chef de service, admin), en Mermaid ou PlantUML.
+    criteria:
+      - docs/uml/use-cases.md avec un diagramme global et un par acteur principal
+      - Chaque cas référence les milestones qui le livrent
+      - Relu par Amar
+
+  - id: M1-02
+    title: "Diagramme de classes du domaine"
+    milestone: M1
+    type: docs
+    area: [docs, backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M1-05, M1-06]
+    context: Modèle du domaine servant de base aux migrations Flyway.
+    criteria:
+      - User, Service, Zone (arbre), Skill, Ticket, TicketEvent, Comment, Attachment, RootCause, SlaPolicy, TemporaryRequest, Notification, NotificationPreference, AuditLog, TicketEmbedding
+      - Cardinalités et énumérations (rôles, statuts, priorités)
+      - docs/uml/class-diagram.md, relu par Fallou
+
+  - id: M1-03
+    title: "Diagramme d'états du ticket et matrice rôles × transitions"
+    milestone: M1
+    type: docs
+    area: [docs, backend]
+    prio: high
+    size: S
+    assignee: A
+    related: [M3-02]
+    context: Spécifie la machine à états qui sera implémentée et testée en M3.
+    criteria:
+      - Diagramme CREATED → ASSIGNED → IN_PROGRESS → ESCALATED → RESOLVED → CLOSED, avec REOPENED
+      - Tableau transition / rôle autorisé / préconditions (ex. cause racine obligatoire pour RESOLVED)
+      - Même chose pour les besoins temporaires (SUBMITTED → … → CLOSED)
+
+  - id: M1-04
+    title: "Diagrammes de séquence des flux clés"
+    milestone: M1
+    type: docs
+    area: [docs]
+    prio: medium
+    size: M
+    assignee: F
+    context: Détaille les échanges entre front, backend, IA et base pour les parcours principaux.
+    criteria:
+      - Connexion OAuth et premier login (compte PENDING)
+      - Création d'un ticket avec classification IA et repli si l'IA est indisponible
+      - Résolution avec cause racine puis indexation de l'embedding
+      - Détection d'un dépassement de SLA et notification
+
+  - id: M1-05
+    title: "Migration Flyway : comptes, services, zones et compétences"
+    milestone: M1
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M1-02]
+    context: Première partie du schéma relationnel.
+    criteria:
+      - "Tables users (statut, rôle, sous-type USER, niveau), services, zones (parent_id, chemin matérialisé ou ltree), skills, user_skills"
+      - Entités JPA et repositories correspondants, ddl-auto=validate passe
+      - Test d'intégration Testcontainers sur l'arbre des zones (ancêtres, sœurs)
+
+  - id: M1-06
+    title: "Migration Flyway : tickets, historique, SLA, besoins temporaires, audit, embeddings"
+    milestone: M1
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M1-05]
+    context: Seconde partie du schéma.
+    criteria:
+      - Tables tickets, ticket_events, comments, attachments, root_cause_categories, sla_policies, temporary_requests, notifications, notification_preferences, audit_logs
+      - Table ticket_embeddings (vector(384), index HNSW)
+      - Séquence annuelle pour les références INC-AAAA-NNNNNN
+      - Index sur les colonnes de filtre (statut, service, zone, assigné, dates)
+
+  - id: M1-07
+    title: "Contrat OpenAPI v1 et génération des types TypeScript"
+    milestone: M1
+    type: feature
+    area: [backend, frontend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M1-10]
+    context: L'API est la source de vérité ; on la fige tôt pour que le front avance en parallèle.
+    criteria:
+      - Contrôleurs et DTO annotés (sans implémentation) pour auth, users, organization, tickets, sla, requests
+      - Format ProblemDetail documenté, pagination documentée
+      - docs/openapi.json committé, `make api-types` génère frontend/src/api/schema.d.ts
+      - La CI frontend échoue si les types ne sont pas à jour
+
+  - id: M1-08
+    title: "Composants de formulaire du design system"
+    milestone: M1
+    type: design
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    extra_labels: ["good first issue"]
+    context: Base de tous les écrans de saisie, intégrée à VeeValidate + Zod.
+    criteria:
+      - UiInput, UiTextarea, UiSelect, UiCombobox (recherche), UiCheckbox, UiSwitch, UiField (label, aide, erreur)
+      - Basés sur reka-ui, accessibles au clavier, états d'erreur et désactivé
+      - Taille de police ≥ 16px sur mobile
+      - Présentés dans /dev/ui avec un formulaire d'exemple VeeValidate + Zod
+
+  - id: M1-09
+    title: "Composants overlay : modale, drawer, menu, tooltip, toasts"
+    milestone: M1
+    type: design
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    context: Superpositions nécessaires à la création rapide, aux confirmations et aux retours utilisateur.
+    criteria:
+      - UiDialog, UiDrawer (droite, plein écran sur mobile), UiDropdownMenu, UiTooltip
+      - Toaster global (succès, erreur, info) avec file et fermeture automatique
+      - Gestion du focus et Échap, présentés dans /dev/ui
+
+  - id: M1-10
+    title: "Table de données dense avec tri et pagination serveur"
+    milestone: M1
+    type: design
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M1-07]
+    context: Composant central des files de traitement, de l'admin et de l'audit.
+    criteria:
+      - Colonnes configurables, tri, pagination serveur (page/size/sort Spring)
+      - États chargement (skeleton), vide et erreur
+      - Chiffres tabulaires, ligne cliquable accessible au clavier
+      - Vue carte en largeur mobile
+
+  - id: M1-11
+    title: "Maquettes des écrans clés"
+    milestone: M1
+    type: design
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    context: Valider l'ergonomie avant l'implémentation (Figma ou maquettes statiques dans /dev/ui).
+    criteria:
+      - Déclaration d'incident mobile (< 30 s)
+      - Vue ticket en 2 colonnes (activité + métadonnées)
+      - File de traitement technicien et dashboard chef de service
+      - Écran vigile avec gros bouton micro
+      - Captures jointes, validées par le binôme
+
+  # ===========================================================================
+  # M2 — Auth & organisation
+  # ===========================================================================
+  - id: M2-01
+    title: "Back : connexion Google OAuth2 restreinte au domaine ept.sn"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M0-10, M1-05]
+    related: [M2-10]
+    context: Connexion exclusivement via Google avec un compte @ept.sn ; vérifications côté serveur (ADR 0004).
+    criteria:
+      - oauth2Login de Spring Security, paramètre hd=ept.sn
+      - Vérification hd == ept.sn ET email @ept.sn ET email_verified, sinon refus avec message clair
+      - Premier login → utilisateur créé en PENDING
+      - Tests : domaine externe refusé, hd absent refusé, premier login crée un compte PENDING
+
+  - id: M2-02
+    title: "Back : JWT en cookie HttpOnly, refresh token et déconnexion"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M2-01]
+    related: [M2-09]
+    context: Session sans token accessible en JavaScript.
+    criteria:
+      - Access token JWT 15 min en cookie HttpOnly, Secure, SameSite=Lax
+      - Refresh token opaque haché en base, rotation à chaque usage, révocation
+      - POST /api/auth/refresh et POST /api/auth/logout
+      - Tests : token expiré, refresh réutilisé (détection de vol) → révocation de la famille
+
+  - id: M2-03
+    title: "Back : endpoint /me et contrôle du statut de compte"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M2-02]
+    related: [M2-10]
+    context: Le front a besoin du profil, et un compte PENDING ou SUSPENDED ne doit rien pouvoir faire d'autre.
+    criteria:
+      - GET /api/me (identité, rôle, sous-type, service, statut)
+      - Un compte PENDING ou SUSPENDED n'accède qu'à /me et /auth/*
+      - Tests d'accès par statut
+
+  - id: M2-04
+    title: "Back : login rapide du profil dev et comptes de seed"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M2-11]
+    context: Tester tous les rôles sans identifiants Google, sans jamais exposer cette porte en prod.
+    criteria:
+      - "Seed dev : un compte par rôle (USER étudiant/PER/PATS, GUARD, TECH_N1, TECH_N2, SERVICE_HEAD, ADMIN)"
+      - POST /api/dev/login-as/{login} émet les mêmes cookies que le login Google
+      - Bean @Profile("dev") uniquement
+      - Test automatisé qui démarre le profil prod et vérifie que l'endpoint répond 404
+
+  - id: M2-05
+    title: "Back : CORS, CSRF et tests de sécurité de l'authentification"
+    milestone: M2
+    type: task
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M2-02]
+    context: Durcir la configuration de sécurité maintenant qu'elle repose sur des cookies.
+    criteria:
+      - CORS limité à APP_FRONTEND_URL
+      - Toute requête mutante sans X-XSRF-TOKEN valide est refusée (test)
+      - En-têtes de sécurité (X-Content-Type-Options, frame-options…)
+      - Documentation mise à jour dans ADR 0004 si écart
+
+  - id: M2-06
+    title: "Back : API des services et des zones"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M2-13]
+    context: Services configurables (pas codés en dur) et arbre de zones géré par l'admin.
+    criteria:
+      - CRUD services (ADMIN) avec code, nom, description, actif
+      - CRUD zones en arbre (déplacement, suppression interdite si utilisée)
+      - GET arbre complet et recherche de zone par nom (pg_trgm)
+      - Tests d'autorisation (seul ADMIN modifie)
+
+  - id: M2-07
+    title: "Back : administration des comptes et portée du chef de service"
+    milestone: M2
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M2-03]
+    related: [M2-12]
+    context: L'admin valide les comptes ; le chef de service valide les techniciens de son service.
+    criteria:
+      - Liste paginée et filtrable (statut, rôle, service)
+      - Valider (PENDING → ACTIVE) en attribuant rôle et service, suspendre, réactiver
+      - Gérer compétences (catégories) et niveau N1/N2 des techniciens
+      - Un SERVICE_HEAD n'agit que sur son service et ne peut pas créer d'ADMIN (tests)
+      - Email de notification à la validation du compte
+
+  - id: M2-08
+    title: "Seed de l'organisation EPT : services et zones réels"
+    milestone: M2
+    type: task
+    area: [backend]
+    prio: medium
+    size: M
+    assignee: F
+    depends: [M0-12, M1-05]
+    context: Données de référence réalistes pour le dev et la démo.
+    criteria:
+      - Services CRI, ServTech, Direction, CPDI, Sécurité
+      - Arbre des zones réel de l'EPT (campus, blocs, salles, bureaux) issu de M0-12
+      - Catégories d'incident et correspondance catégorie → service
+      - Migration Flyway de données ou script scripts/seed/ rejouable
+
+  - id: M2-09
+    title: "Front : store d'authentification, client API et gardes de navigation"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M2-02]
+    context: Brancher le front sur l'auth par cookies.
+    criteria:
+      - Store Pinia auth (profil depuis /me)
+      - Client API typé (types OpenAPI), retry transparent après POST /auth/refresh sur 401
+      - Gardes de route (connecté, statut ACTIVE, rôle requis)
+      - Tests Vitest du store et des gardes
+
+  - id: M2-10
+    title: "Front : page de connexion et écrans de compte en attente ou suspendu"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M2-01, M2-03]
+    context: Premier contact avec l'application, doit inspirer confiance.
+    criteria:
+      - "Page /connexion : bouton « Se connecter avec Google (@ept.sn) », message si domaine refusé"
+      - Écran « Compte en attente de validation » (explication, contact)
+      - Écran « Compte suspendu »
+      - Mobile-first, clair et sombre
+
+  - id: M2-11
+    title: "Front : sélecteur de connexion rapide en dev"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: S
+    assignee: F
+    related: [M2-04]
+    extra_labels: ["good first issue"]
+    context: Se connecter en un clic avec un compte de seed, uniquement dans le build de dev.
+    criteria:
+      - Liste des comptes de seed par rôle sur la page de connexion (import.meta.env.DEV)
+      - Absent du bundle de production (vérifié)
+
+  - id: M2-12
+    title: "Front : administration des comptes"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M2-07]
+    context: Écran de validation des comptes en attente et de gestion des techniciens.
+    criteria:
+      - Table filtrable (statut, rôle, service), compteur de comptes en attente
+      - Drawer de validation (rôle, service, niveau, compétences)
+      - Suspendre et réactiver avec confirmation
+      - Le chef de service ne voit que son service
+
+  - id: M2-13
+    title: "Front : administration des services et des zones"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    related: [M2-06]
+    context: Rendre la configuration de l'organisation autonome pour l'admin.
+    criteria:
+      - Liste et formulaire des services
+      - Arbre des zones éditable (ajouter, renommer, déplacer, désactiver)
+      - Composant réutilisable de sélection de zone (combobox avec chemin complet)
+
+  - id: M2-14
+    title: "Front : navigation par rôle et page de profil"
+    milestone: M2
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: S
+    assignee: F
+    depends: [M2-09]
+    context: Chaque rôle ne voit que les entrées qui le concernent.
+    criteria:
+      - navigationFor(role) branché sur le store auth, palette de commandes filtrée aussi
+      - Menu profil (nom, rôle, service, déconnexion)
+      - Page profil (informations, lien vers les préférences de notification)
+
+  # ===========================================================================
+  # M3 — Tickets cœur
+  # ===========================================================================
+  - id: M3-01
+    title: "Back : création de ticket et référence lisible"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M1-06]
+    related: [M3-13]
+    context: Création d'un incident par tout utilisateur actif.
+    criteria:
+      - POST /api/tickets (titre, description, catégorie optionnelle, priorité, zone)
+      - Référence INC-AAAA-NNNNNN unique, séquence remise à zéro chaque année
+      - Validation des entrées, ProblemDetail en cas d'erreur
+      - Événement ticket.created publié (pour notifications et IA)
+
+  - id: M3-02
+    title: "Back : machine à états explicite du ticket"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M1-03]
+    context: Transitions autorisées + rôle requis + préconditions, testées unitairement de façon exhaustive.
+    criteria:
+      - Classe TicketStateMachine indépendante de Spring (table de transitions)
+      - RESOLVED impossible sans cause racine (texte + catégorie de cause)
+      - REOPENED uniquement par le demandeur, depuis RESOLVED
+      - Tests paramétrés couvrant toutes les paires (état, transition, rôle)
+
+  - id: M3-03
+    title: "Back : endpoints de transition du ticket"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M3-02]
+    related: [M3-17]
+    context: Exposer les actions métier plutôt qu'un PATCH de statut générique.
+    criteria:
+      - assign, start, escalate (N1 → N2, réassignation), resolve, close, reopen
+      - Contrôle de portée (technicien de son service, chef de son service)
+      - Chaque transition produit un TicketEvent et une notification
+      - Tests d'intégration des parcours nominal et d'escalade
+
+  - id: M3-04
+    title: "Back : historique complet des changements"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M3-19]
+    context: Traçabilité de tout ce qui arrive à un ticket.
+    criteria:
+      - TicketEvent pour statut, assignation, priorité, zone, catégorie, commentaire, pièce jointe
+      - Ancienne et nouvelle valeur, auteur, date
+      - GET /api/tickets/{id}/events paginé
+
+  - id: M3-05
+    title: "Back : commentaires publics et internes"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M3-18]
+    context: Échanges entre demandeur et techniciens, et notes internes entre techniciens.
+    criteria:
+      - Ajouter, lister et modifier (auteur, 15 min) un commentaire
+      - Les commentaires internes ne sont jamais renvoyés à un USER (test)
+      - Notification au demandeur ou à l'assigné selon l'auteur
+
+  - id: M3-06
+    title: "Back : pièces jointes avec StorageService"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M3-18]
+    context: Photos et PDF joints aux tickets, stockés sur disque (volume Docker) derrière une abstraction.
+    criteria:
+      - Interface StorageService + implémentation disque
+      - Limites de taille, types image/* et application/pdf, vérification des magic bytes
+      - Téléchargement soumis aux mêmes droits que le ticket, nom de fichier assaini
+      - Tests (type refusé, taille dépassée, accès refusé)
+
+  - id: M3-07
+    title: "Back : recherche, filtres et visibilité des tickets"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    related: [M3-14, M3-15]
+    context: Chaque rôle voit exactement ce qu'il doit voir.
+    criteria:
+      - GET /api/tickets filtrable (statut, service, zone et sous-zones, priorité, assigné, période, texte)
+      - "Portée : USER ses tickets, TECH son service, SERVICE_HEAD son service, ADMIN tout"
+      - Pagination et tri serveur
+      - Tests d'accès croisés (un chef ne voit pas un autre service)
+
+  - id: M3-08
+    title: "Back : politiques SLA et calcul des échéances"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M3-22]
+    context: Délais de prise en charge et de résolution par service × priorité.
+    criteria:
+      - CRUD des politiques SLA (ADMIN, SERVICE_HEAD pour son service)
+      - Échéances calculées à la création et recalculées si la priorité change
+      - Tests unitaires du calcul (cas limites)
+
+  - id: M3-09
+    title: "Back : job de détection des dépassements de SLA"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M3-08]
+    related: [M3-20]
+    context: Alerter avant et après dépassement.
+    criteria:
+      - "@Scheduled toutes les minutes, idempotent (un ticket n'est notifié qu'une fois par seuil)"
+      - Marqueurs SLA_AT_RISK (80 % du délai) et SLA_BREACHED sur le ticket
+      - Notification à l'assigné et au chef de service
+      - Tests avec horloge injectée (Clock)
+
+  - id: M3-10
+    title: "Back : clôture automatique des tickets résolus"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: medium
+    size: S
+    assignee: A
+    depends: [M3-02]
+    context: CLOSED automatique X jours après RESOLVED sans contestation.
+    criteria:
+      - Délai paramétrable (app.tickets.auto-close-days, 7 par défaut)
+      - Job planifié, événement d'historique « clôture automatique »
+      - Test avec horloge injectée
+
+  - id: M3-11
+    title: "Back : socle de notifications et canal in-app temps réel"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    related: [M3-21]
+    context: Interface NotificationChannel commune, premier canal STOMP (ADR 0003).
+    criteria:
+      - Événements métier → NotificationService → canaux selon les préférences
+      - Notifications persistées (lu / non lu), API liste et marquer comme lu
+      - WebSocket STOMP authentifié par cookie, /user/queue/notifications et /topic/services/{id}/tickets
+      - Préférences par utilisateur et par type d'événement
+
+  - id: M3-12
+    title: "Back : canal email avec templates HTML"
+    milestone: M3
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M3-11]
+    context: Emails en français, envoyés de façon asynchrone, visibles dans Mailpit en dev.
+    criteria:
+      - Spring Mail + templates Thymeleaf (création, assignation, statut, commentaire, SLA, validation de compte)
+      - Mise en page sobre, compatible avec les clients mail, lien vers le ticket
+      - Envoi asynchrone, un échec n'affecte pas la transaction métier
+      - Test d'intégration avec GreenMail ou Mailpit
+
+  - id: M3-13
+    title: "Front : déclaration d'incident mobile-first"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M3-01]
+    context: Déclarer un incident en moins de 30 secondes, depuis un téléphone.
+    criteria:
+      - Drawer de création rapide (desktop) et page plein écran (mobile)
+      - Titre, description, zone (combobox), priorité, photo (appareil photo mobile)
+      - Validation Zod, toast de succès avec la référence
+      - Parcours chronométré < 30 s sur mobile
+
+  - id: M3-14
+    title: "Front : liste « Mes tickets »"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M3-07]
+    context: Suivi par l'usager de ses demandes.
+    criteria:
+      - Liste paginée avec statut, priorité, date, zone
+      - Filtres (ouverts, résolus, tous)
+      - Vue carte sur mobile, état vide utile
+
+  - id: M3-15
+    title: "Front : file de traitement technicien et chef de service"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M3-07]
+    context: Table dense à la manière de Linear pour trier et traiter les tickets du service.
+    criteria:
+      - Filtres (statut, priorité, zone, assigné, SLA), mémorisés dans l'URL
+      - Vues rapides « Mes tickets », « Non assignés », « SLA à risque »
+      - Mise à jour live via STOMP
+      - Navigation clavier (j/k, Entrée)
+
+  - id: M3-16
+    title: "Front : vue ticket en deux colonnes"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    context: Fil d'activité à gauche, métadonnées éditables à droite.
+    criteria:
+      - En-tête avec référence, titre, statut
+      - Colonne droite éditable selon les droits (priorité, assigné, zone, catégorie)
+      - Métadonnées au-dessus de l'activité sur mobile
+      - Skeleton de chargement, page 404 si ticket introuvable ou interdit
+
+  - id: M3-17
+    title: "Front : actions de transition et modale de résolution"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M3-03]
+    context: Les actions proposées dépendent de l'état et du rôle.
+    criteria:
+      - Boutons d'action contextuels (prendre en charge, escalader, résoudre, clore, rouvrir)
+      - Modale de résolution avec cause racine obligatoire (texte + catégorie)
+      - Contestation par le demandeur avec motif
+      - Confirmation et toasts
+
+  - id: M3-18
+    title: "Front : commentaires et pièces jointes"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M3-05, M3-06]
+    context: Échanges sur le ticket.
+    criteria:
+      - Éditeur de commentaire avec bascule public / interne (techniciens uniquement), distinction visuelle
+      - Upload par glisser-déposer et depuis l'appareil photo, progression, erreurs de type ou de taille
+      - Aperçu des images, téléchargement des PDF
+
+  - id: M3-19
+    title: "Front : timeline de l'historique"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    related: [M3-04]
+    context: Chronologie lisible de tous les changements, fusionnée avec les commentaires.
+    criteria:
+      - Événements formatés en français (« A. Diop a escaladé le ticket à N2 »)
+      - Dates relatives avec date exacte au survol
+      - Regroupement des événements rapprochés
+
+  - id: M3-20
+    title: "Front : badges de statut, de priorité et indicateurs SLA"
+    milestone: M3
+    type: design
+    area: [frontend]
+    prio: high
+    size: S
+    assignee: F
+    related: [M3-09]
+    extra_labels: ["good first issue"]
+    context: Composants métier réutilisés partout.
+    criteria:
+      - StatusBadge, PriorityBadge selon le mapping de docs/design-system.md
+      - SlaIndicator (temps restant, à risque, dépassé), avec texte et pas seulement la couleur
+      - Ajoutés à /dev/ui
+
+  - id: M3-21
+    title: "Front : centre de notifications temps réel"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M3-11]
+    context: Recevoir et consulter les notifications sans recharger la page.
+    criteria:
+      - Client @stomp/stompjs avec reconnexion automatique
+      - Badge du nombre de non lues dans la topbar, panneau de notifications
+      - Marquer comme lu (une ou toutes), lien vers le ticket
+      - Toast pour les notifications importantes (SLA dépassé)
+
+  - id: M3-22
+    title: "Front : administration des SLA et préférences de notification"
+    milestone: M3
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    related: [M3-08, M3-11]
+    context: Paramétrage par l'admin ou le chef de service, préférences par l'utilisateur.
+    criteria:
+      - Grille service × priorité éditable (délais de prise en charge et de résolution)
+      - Page de préférences (canal × type d'événement)
+
+  # ===========================================================================
+  # M4 — IA v1
+  # ===========================================================================
+  - id: M4-01
+    title: "IA : jeu de données de seed en français"
+    milestone: M4
+    type: task
+    area: [ai]
+    prio: high
+    size: L
+    assignee: F
+    depends: [M0-12]
+    context: "À démarrer dès M2. Base d'entraînement de la classification et historique de démo pour la corrélation."
+    criteria:
+      - Environ 600 tickets étiquetés (catégorie, service), équilibrés, formulations variées et fautes de frappe réalistes
+      - Environ 150 tickets historiques résolus avec zone, date et cause racine, dont des récurrences volontaires (même zone, même cause)
+      - Partage train / test reproductible (graine fixe)
+      - Méthode de génération documentée dans docs/ai.md (données synthétiques, à dire en soutenance)
+
+  - id: M4-02
+    title: "IA : pipeline de classification TF-IDF et régression logistique"
+    milestone: M4
+    type: feature
+    area: [ai]
+    prio: high
+    size: L
+    assignee: F
+    depends: [M4-01]
+    context: v1 réaliste, rapide et explicable.
+    criteria:
+      - Normalisation du texte (accents, casse, stop-words FR), TF-IDF mots et caractères
+      - Régression logistique avec règles par mots-clés prioritaires
+      - Entraînement par script, modèle versionné et chargé au démarrage
+      - Tests unitaires du prétraitement
+
+  - id: M4-03
+    title: "IA : endpoint /classify avec confiance et explication"
+    milestone: M4
+    type: feature
+    area: [ai]
+    prio: high
+    size: M
+    assignee: F
+    depends: [M4-02]
+    related: [M4-11]
+    context: Réponse exploitable et explicable par le backend.
+    criteria:
+      - Entrée titre + description, sortie catégorie, service, confiance, top termes contributifs, règle éventuellement appliquée
+      - Authentification par X-Internal-Token
+      - Tests pytest (cas nominal, texte vide, token invalide)
+
+  - id: M4-04
+    title: "IA : script d'évaluation de la classification"
+    milestone: M4
+    type: task
+    area: [ai, docs]
+    prio: medium
+    size: S
+    assignee: F
+    depends: [M4-02]
+    context: Chiffres présentables en soutenance, honnêtes sur leur portée.
+    criteria:
+      - Précision, rappel, F1 par catégorie et matrice de confusion
+      - Résultats copiés dans docs/ai.md avec la date et la version du modèle
+
+  - id: M4-05
+    title: "IA : embeddings multilingues et indexation pgvector"
+    milestone: M4
+    type: feature
+    area: [ai]
+    prio: high
+    size: M
+    assignee: F
+    depends: [M1-06]
+    related: [M4-12]
+    context: Base de la corrélation sémantique.
+    criteria:
+      - paraphrase-multilingual-MiniLM-L12-v2 chargé depuis le cache de modèles
+      - POST /embeddings/reindex (tous ou une liste d'identifiants), écriture dans ticket_embeddings
+      - Test d'intégration avec Postgres pgvector
+
+  - id: M4-06
+    title: "IA : endpoint /correlate et indice de récurrence"
+    milestone: M4
+    type: feature
+    area: [ai]
+    prio: high
+    size: L
+    assignee: F
+    depends: [M4-05]
+    related: [M4-09, M4-12]
+    context: Retrouver des incidents résolus similaires dans la même zone ou une zone voisine, sur toute la période.
+    criteria:
+      - k plus proches voisins restreints à la zone, ses ancêtres et ses sœurs
+      - recurrence_index calculé selon la formule de docs/ai.md (jamais appelé probabilité)
+      - Réponse avec ticket, zone, date, cause racine, similarité et détail des termes
+      - Tests sur un mini jeu de données déterministe
+
+  - id: M4-07
+    title: "IA : endpoint /suggest-assignee avec score explicable"
+    milestone: M4
+    type: feature
+    area: [ai]
+    prio: high
+    size: M
+    assignee: F
+    related: [M4-11]
+    context: Classement des techniciens selon compétence, disponibilité, charge et urgence.
+    criteria:
+      - Formule documentée dans docs/ai.md, niveau N1 par défaut
+      - Réponse avec le détail de chaque terme par technicien
+      - Tests unitaires (cas d'égalité, aucun technicien disponible)
+
+  - id: M4-08
+    title: "Front : panneau de suggestion IA au tri des tickets"
+    milestone: M4
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M4-11]
+    context: Rendre l'IA transparente pour le chef de service et les techniciens.
+    criteria:
+      - Catégorie prédite, confiance, termes contributifs, technicien suggéré et critères
+      - Accepter ou corriger en un clic (la correction est journalisée pour un réentraînement futur)
+      - Mention claire quand le ticket a été routé manuellement (IA indisponible ou confiance faible)
+
+  - id: M4-09
+    title: "Front : alerte de corrélation sur la vue ticket"
+    milestone: M4
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M4-06, M4-12]
+    context: "« Incident similaire il y a 1 mois dans Bloc Administratif — cause : oxydation du switch. Indice de récurrence : 85 % »."
+    criteria:
+      - Encart affiché pour les techniciens si indice ≥ 0,5
+      - Liste des incidents similaires avec lien, cause racine et indice
+      - Info-bulle expliquant ce qu'est (et n'est pas) l'indice
+      - Retour « utile / pas utile » enregistré
+
+  - id: M4-10
+    title: "Back : client IA résilient"
+    milestone: M4
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    context: Le backend doit continuer à fonctionner si le service IA est indisponible.
+    criteria:
+      - RestClient avec timeout (AI_TIMEOUT), en-tête X-Internal-Token
+      - Resilience4j circuit breaker + retry limité, métriques exposées
+      - Tests avec un serveur simulé (lent, en erreur, indisponible)
+
+  - id: M4-11
+    title: "Back : classification et assignation automatiques à la création"
+    milestone: M4
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M4-10, M3-01]
+    related: [M4-03, M4-07, M4-08]
+    context: Brancher l'IA sur le flux de création sans bloquer l'utilisateur.
+    criteria:
+      - Appel asynchrone après création (le 201 n'attend pas l'IA)
+      - Confiance ≥ seuil → catégorie, service et assignation ; sinon file manuelle du chef de service
+      - Prédiction et explication stockées sur le ticket pour l'UI
+      - Tests des deux branches et de l'IA indisponible
+
+  - id: M4-12
+    title: "Back : indexation à la résolution et endpoint de corrélation"
+    milestone: M4
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M4-10]
+    related: [M4-05, M4-06, M4-09]
+    context: Chaque ticket résolu enrichit la mémoire de corrélation.
+    criteria:
+      - À la résolution, demande de (ré)indexation de l'embedding
+      - GET /api/tickets/{id}/correlations (techniciens uniquement), proxy filtré vers /correlate
+      - Réponse vide (et non en erreur) si l'IA est indisponible
+
+  - id: M4-13
+    title: "Infra : image IA avec torch CPU et cache de modèles"
+    milestone: M4
+    type: task
+    area: [infra, ai]
+    prio: medium
+    size: M
+    assignee: A
+    context: Garder l'image IA raisonnable et le démarrage rapide.
+    criteria:
+      - Dépendances ML ajoutées au pyproject, torch CPU uniquement (index PyTorch CPU)
+      - Modèles téléchargés une fois dans le volume models-cache
+      - Healthcheck qui attend le chargement du modèle, temps de démarrage mesuré
+      - Taille de l'image documentée
+
+  - id: M4-14
+    title: "Seed des tickets historiques résolus"
+    milestone: M4
+    type: task
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M4-01]
+    context: Environ 150 tickets historiques pour que la corrélation ait quelque chose à montrer.
+    criteria:
+      - Script scripts/seed/ qui insère les tickets historiques (dates étalées sur 12 mois) avec historique et causes racines
+      - Déclenche la réindexation des embeddings
+      - Commande `make seed` idempotente
+
+  # ===========================================================================
+  # M5 — Pilotage
+  # ===========================================================================
+  - id: M5-01
+    title: "Back : calcul des KPI"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    related: [M5-08]
+    context: Requêtes d'agrégation performantes pour les dashboards.
+    criteria:
+      - MTTA, MTTR, taux de respect SLA, tickets ouverts/résolus, charge par technicien, top zones, top causes
+      - Filtres de période et de service
+      - Besoins temporaires comptés séparément
+      - Tests d'intégration sur un jeu de données connu
+
+  - id: M5-02
+    title: "Back : endpoints des dashboards par rôle"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    depends: [M5-01]
+    related: [M5-09, M5-10, M5-11]
+    context: Un endpoint par tableau de bord, portée contrôlée côté serveur.
+    criteria:
+      - /api/dashboards/me, /technician, /service/{id}, /admin
+      - Un chef ne peut consulter que son service (test)
+
+  - id: M5-03
+    title: "Back : rapport d'intervention PDF à la résolution"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M5-14]
+    context: Document formel généré automatiquement.
+    criteria:
+      - Template Thymeleaf → PDF (OpenHTMLtoPDF), police embarquée, en-tête EPT
+      - Ticket, chronologie, cause racine, technicien, durées comparées au SLA
+      - Généré à la résolution, stocké via StorageService, téléchargeable selon les droits
+
+  - id: M5-04
+    title: "Back : export PDF mensuel par service"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: medium
+    size: M
+    assignee: A
+    depends: [M5-01]
+    related: [M5-14]
+    context: Bilan mensuel pour le chef de service et la direction.
+    criteria:
+      - KPI du mois, tableaux par catégorie et zone, tickets en dépassement de SLA
+      - Génération à la demande (chef, admin)
+
+  - id: M5-05
+    title: "Back : journal d'audit"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    related: [M5-12]
+    context: Qui a fait quoi, quand, sur les actions sensibles.
+    criteria:
+      - Validation et suspension de comptes, changements de rôle, configuration (services, zones, SLA), connexions, réassignations
+      - Acteur, action, cible, avant / après, IP, date
+      - API de consultation filtrable (ADMIN uniquement), en ajout seul
+
+  - id: M5-06
+    title: "Back : besoins temporaires"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: high
+    size: L
+    assignee: A
+    related: [M5-13]
+    context: Entité séparée des incidents pour ne pas polluer les KPI de pannes.
+    criteria:
+      - TemporaryRequest avec créneau de début et de fin, service, objet
+      - "Circuit : SUBMITTED → APPROVED | REJECTED → PREPARED → DELIVERED → RETURNED / CLOSED (machine à états testée)"
+      - Portée par rôle identique aux tickets
+
+  - id: M5-07
+    title: "Back : notifications et compteurs des besoins temporaires"
+    milestone: M5
+    type: feature
+    area: [backend]
+    prio: medium
+    size: S
+    assignee: A
+    depends: [M5-06]
+    context: Suivi dédié des demandes temporaires.
+    criteria:
+      - Notifications à chaque étape du circuit
+      - Rappel avant la fin du créneau (retour du matériel)
+      - Compteurs dédiés dans les endpoints de dashboard
+
+  - id: M5-08
+    title: "Front : cartes KPI et graphiques ECharts"
+    milestone: M5
+    type: design
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M5-01]
+    context: Composants de visualisation cohérents avec le design system.
+    criteria:
+      - KpiCard (valeur tabulaire, variation, période)
+      - Thème ECharts dérivé des tokens (clair et sombre), chargement à la demande
+      - Graphiques ligne, barres, donut ; présentés dans /dev/ui
+
+  - id: M5-09
+    title: "Front : dashboards usager et technicien"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    related: [M5-02]
+    context: Vue personnelle.
+    criteria:
+      - "Usager : mes tickets par statut, délai moyen de prise en charge"
+      - "Technicien : ma file, SLA à risque, mes statistiques"
+      - Filtre de période
+
+  - id: M5-10
+    title: "Front : dashboard chef de service"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M5-02]
+    context: Piloter le service.
+    criteria:
+      - Ouverts/résolus, charge par technicien, MTTA/MTTR, taux SLA, top zones, top causes
+      - Filtres de période, export PDF mensuel
+      - Clic sur un indicateur → file filtrée correspondante
+
+  - id: M5-11
+    title: "Front : dashboard administrateur"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    related: [M5-02]
+    context: Vue globale de l'EPT.
+    criteria:
+      - Comparaison inter-services, comptes en attente, volumes globaux
+      - Besoins temporaires dans une section séparée
+
+  - id: M5-12
+    title: "Front : consultation du journal d'audit"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: S
+    assignee: F
+    related: [M5-05]
+    extra_labels: ["good first issue"]
+    context: Écran admin de consultation.
+    criteria:
+      - Table filtrable (acteur, action, période), détail avant / après dans un drawer
+
+  - id: M5-13
+    title: "Front : besoins temporaires"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: high
+    size: L
+    assignee: F
+    related: [M5-06]
+    context: Demander un vidéoprojecteur pour 2 h, suivre la demande, la traiter côté service.
+    criteria:
+      - Formulaire avec créneau (date et heures), liste « Mes demandes »
+      - File de traitement côté service avec actions du circuit
+      - Statuts avec leurs propres badges
+
+  - id: M5-14
+    title: "Front : téléchargement des rapports PDF"
+    milestone: M5
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: S
+    assignee: F
+    related: [M5-03, M5-04]
+    context: Accès aux documents générés.
+    criteria:
+      - Bouton « Rapport d'intervention » sur un ticket résolu
+      - Export mensuel depuis le dashboard chef de service
+
+  # ===========================================================================
+  # M6 — Modules étendus (STRETCH)
+  # ===========================================================================
+  - id: M6-01
+    title: "IA : endpoint /transcribe avec faster-whisper"
+    milestone: M6
+    type: feature
+    area: [ai]
+    prio: medium
+    size: M
+    assignee: F
+    related: [M6-07]
+    context: Transcription de la saisie vocale des vigiles.
+    criteria:
+      - faster-whisper small, français, int8 CPU
+      - Formats webm/ogg/wav, durée maximale 60 s
+      - Tests avec un court fichier audio de référence
+
+  - id: M6-02
+    title: "IA : extraction de titre, catégorie et zone depuis la transcription"
+    milestone: M6
+    type: feature
+    area: [ai]
+    prio: medium
+    size: M
+    assignee: F
+    depends: [M6-01, M4-03]
+    context: Proposer un ticket prêt à valider.
+    criteria:
+      - Titre court généré (règles et extraction), catégorie via /classify
+      - Zone détectée par correspondance floue avec les noms de zones
+      - Réponse avec niveau de confiance par champ
+
+  - id: M6-03
+    title: "Front : interface vigile mobile avec saisie vocale"
+    milestone: M6
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: L
+    assignee: F
+    related: [M6-07]
+    context: Signaler en quelques secondes pendant une ronde.
+    criteria:
+      - Gros bouton micro (≥ 64px), enregistrement MediaRecorder, visualisation du niveau sonore
+      - Repli sur la saisie texte si le micro est refusé
+      - Fonctionne sur Android Chrome (tester sur un vrai téléphone)
+
+  - id: M6-04
+    title: "Front : validation de la proposition IA par le vigile"
+    milestone: M6
+    type: feature
+    area: [frontend]
+    prio: medium
+    size: M
+    assignee: F
+    depends: [M6-03]
+    context: Le vigile garde la main avant toute création.
+    criteria:
+      - Transcription, titre, catégorie et zone proposés, tous modifiables
+      - Création en un clic, confirmation claire
+
+  - id: M6-05
+    title: "Front : historique des signalements de ronde"
+    milestone: M6
+    type: feature
+    area: [frontend]
+    prio: low
+    size: S
+    assignee: F
+    context: Suivi simple pour le vigile.
+    criteria:
+      - Liste de mes signalements avec statut
+      - Zones favorites (raccourcis de sélection)
+
+  - id: M6-06
+    title: "IA : mesure de la latence du speech-to-text"
+    milestone: M6
+    type: docs
+    area: [ai, docs]
+    prio: low
+    size: S
+    assignee: F
+    depends: [M6-01]
+    context: Chiffres réels pour la soutenance et le dimensionnement du serveur.
+    criteria:
+      - Temps de transcription pour 10, 30 et 60 s d'audio sur la machine cible
+      - Consommation mémoire, résultats dans docs/ai.md
+
+  - id: M6-07
+    title: "Back : rôle vigile et création de ticket depuis la saisie vocale"
+    milestone: M6
+    type: feature
+    area: [backend]
+    prio: medium
+    size: M
+    assignee: A
+    related: [M6-01, M6-03]
+    context: Relayer l'audio vers l'IA et créer le ticket validé.
+    criteria:
+      - POST /api/guard/transcriptions (audio, limite de taille), proxy vers /transcribe
+      - Création du ticket avec origine VOICE, audio conservé en pièce jointe
+      - Accès réservé au rôle GUARD
+
+  - id: M6-08
+    title: "Back : canal WhatsApp derrière feature flag"
+    milestone: M6
+    type: feature
+    area: [backend]
+    prio: low
+    size: M
+    assignee: A
+    context: WhatsApp Cloud API (voir docs/setup-whatsapp.md), désactivé par défaut.
+    criteria:
+      - WhatsAppCloudChannel activé si APP_WHATSAPP_ENABLED=true, LoggingWhatsAppChannel sinon
+      - Appel HTTP résilient, un échec n'affecte pas les autres canaux
+      - Test avec serveur simulé
+
+  - id: M6-09
+    title: "Back : templates WhatsApp et consentement utilisateur"
+    milestone: M6
+    type: feature
+    area: [backend, frontend]
+    prio: low
+    size: S
+    assignee: A
+    depends: [M6-08]
+    context: Conformité aux règles de Meta et respect du consentement.
+    criteria:
+      - Templates ticket_assigned, ticket_status_changed, sla_breach (paramètres en français)
+      - Opt-in explicite et numéro de téléphone dans les préférences
+
+  - id: M6-10
+    title: "Infra : modèle Whisper préchargé et limites mémoire"
+    milestone: M6
+    type: task
+    area: [infra, ai]
+    prio: low
+    size: S
+    assignee: A
+    depends: [M6-01]
+    context: Éviter un premier appel très lent et une saturation de la RAM.
+    criteria:
+      - Téléchargement du modèle dans models-cache au premier démarrage
+      - Limites mémoire du conteneur IA en prod, comportement vérifié
+
+  # ===========================================================================
+  # M7 — Recette & livraison
+  # ===========================================================================
+  - id: M7-01
+    title: "Checklist sécurité OWASP Top 10 et corrections"
+    milestone: M7
+    type: task
+    area: [backend, frontend]
+    prio: high
+    size: L
+    assignee: A
+    context: Revue de sécurité systématique avant la mise en production.
+    criteria:
+      - docs/security-checklist.md passant en revue les 10 catégories avec preuves (tests, config)
+      - Contrôle d'accès (IDOR) testé sur tickets, pièces jointes, dashboards
+      - Dépendances à jour (Dependabot), aucun secret dans l'historique git (gitleaks)
+      - Corrections faites ou tracées en issues
+
+  - id: M7-02
+    title: "Tests de charge de base"
+    milestone: M7
+    type: task
+    area: [infra]
+    prio: medium
+    size: M
+    assignee: A
+    context: Vérifier que l'application tient une charge réaliste pour l'EPT.
+    criteria:
+      - Scénario k6 (connexion dev, création, liste, vue ticket), 50 utilisateurs virtuels
+      - p95 < 500 ms sur les endpoints de lecture, résultats dans docs/
+      - Index manquants ajoutés si besoin
+
+  - id: M7-03
+    title: "Déploiement en production"
+    milestone: M7
+    type: task
+    area: [infra]
+    prio: high
+    size: L
+    assignee: A
+    depends: [M0-13]
+    context: Mise en ligne sur l'hébergement obtenu en M0.
+    criteria:
+      - infra/docker-compose.prod.yml déployé, TLS actif, client OAuth prod configuré
+      - Aucun port de base de données exposé, Swagger et login dev absents (vérifiés)
+      - docs/deployment.md complété et rejoué par Fallou
+
+  - id: M7-04
+    title: "Sauvegardes et restauration"
+    milestone: M7
+    type: task
+    area: [infra]
+    prio: medium
+    size: S
+    assignee: A
+    depends: [M7-03]
+    context: Ne pas perdre les données de l'EPT.
+    criteria:
+      - Sauvegarde quotidienne pg_dump + volume de fichiers, rétention 14 jours
+      - Restauration testée sur une instance vierge, procédure documentée
+
+  - id: M7-05
+    title: "Guide administrateur"
+    milestone: M7
+    type: docs
+    area: [docs]
+    prio: medium
+    size: M
+    assignee: A
+    context: Pour le CRI, qui exploitera la plateforme.
+    criteria:
+      - Validation des comptes, services, zones, SLA, lecture de l'audit
+      - Exploitation (logs, redémarrage, sauvegarde, mise à jour)
+
+  - id: M7-06
+    title: "Données de démonstration et remise à zéro de la démo"
+    milestone: M7
+    type: task
+    area: [backend]
+    prio: high
+    size: M
+    assignee: A
+    context: Une démo de soutenance fiable et rejouable.
+    criteria:
+      - Jeu de démo complet (comptes par rôle, tickets à tous les états, SLA à risque, corrélations spectaculaires)
+      - Commande `make demo-reset` qui remet la démo dans un état connu en moins d'une minute
+
+  - id: M7-07
+    title: "Mise en place de Playwright et e2e en CI"
+    milestone: M7
+    type: task
+    area: [frontend, infra]
+    prio: high
+    size: M
+    assignee: F
+    context: Base des tests de bout en bout sur la stack Docker complète.
+    criteria:
+      - Playwright configuré (Chromium, viewport desktop et mobile)
+      - Authentification via le login dev
+      - Workflow CI qui démarre la stack avec docker compose et lance les e2e sur les PR vers main
+
+  - id: M7-08
+    title: "E2E : déclarer un incident"
+    milestone: M7
+    type: task
+    area: [frontend]
+    prio: high
+    size: S
+    assignee: F
+    depends: [M7-07]
+    context: Parcours usager en viewport mobile.
+    criteria:
+      - Connexion en tant qu'étudiant, déclaration, référence affichée, ticket visible dans « Mes tickets »
+
+  - id: M7-09
+    title: "E2E : traiter et résoudre un ticket"
+    milestone: M7
+    type: task
+    area: [frontend]
+    prio: high
+    size: M
+    assignee: F
+    depends: [M7-07]
+    context: Parcours technicien.
+    criteria:
+      - Prise en charge, commentaire interne, escalade N2, résolution avec cause racine
+      - Le demandeur voit la résolution et peut contester
+
+  - id: M7-10
+    title: "E2E : valider un compte"
+    milestone: M7
+    type: task
+    area: [frontend]
+    prio: high
+    size: S
+    assignee: F
+    depends: [M7-07]
+    context: Parcours administrateur.
+    criteria:
+      - Un compte PENDING est validé avec rôle et service puis peut accéder à l'application
+
+  - id: M7-11
+    title: "Guide utilisateur"
+    milestone: M7
+    type: docs
+    area: [docs]
+    prio: medium
+    size: M
+    assignee: F
+    context: Guides courts et illustrés pour les usagers, techniciens et vigiles.
+    criteria:
+      - Une page par rôle avec captures d'écran
+      - Accessible depuis l'application (lien d'aide)
+
+  - id: M7-12
+    title: "Support de soutenance et répétition de la démo"
+    milestone: M7
+    type: docs
+    area: [docs]
+    prio: high
+    size: L
+    assignee: F
+    depends: [M7-06]
+    context: Soutenance le 2027-01-01.
+    criteria:
+      - Slides (problème, solution, architecture, IA avec chiffres honnêtes, démo, limites, pistes v2)
+      - Scénario de démo minuté, avec vidéo de secours
+      - Deux répétitions complètes à deux
