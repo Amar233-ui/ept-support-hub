@@ -2,7 +2,7 @@
 FROM ghcr.io/astral-sh/uv:0.12 AS uv
 
 # ---------- base: deps installed with uv from the lockfile ----------
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 COPY --from=uv /uv /usr/local/bin/uv
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
