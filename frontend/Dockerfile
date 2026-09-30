@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- dev: Vite dev server with HMR on mounted sources ----------
-FROM node:24-alpine AS dev
+FROM node:26-alpine AS dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -13,7 +13,7 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=5 \
 CMD ["sh", "-c", "npm ci --no-audit --no-fund --prefer-offline && npm run dev"]
 
 # ---------- build ----------
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
