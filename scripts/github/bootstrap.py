@@ -288,6 +288,7 @@ def ensure_issues(repo: str, plan: dict, ms_titles: dict[str, str]) -> dict[str,
         issue_id = match.group(1)
         return f"#{numbers[issue_id]}" if issue_id in numbers else match.group(0)
 
+    pending: set[str] = set()
     for issue in plan["issues"]:
         gi = found[issue["id"]]
         current = gi.get("body") or ""
@@ -301,8 +302,14 @@ def ensure_issues(repo: str, plan: dict, ms_titles: dict[str, str]) -> dict[str,
                 capture_output=True,
                 text=True,
             )
-            if result.returncode == 0:
+            # GitHub silently ignores assignees who are not collaborators yet: verify.
+            actual = gh_json("issue", "view", str(gi["number"]), "--repo", repo, "--json", "assignees")
+            if result.returncode == 0 and any(a["login"] == assignee for a in actual["assignees"]):
                 print(f"  ~ #{gi['number']} assignée à {assignee}")
+            else:
+                pending.add(assignee)
+    for login in sorted(pending):
+        print(f"  ! {login} n'est pas encore collaborateur : relancer le script après acceptation de l'invitation")
     return found
 
 
