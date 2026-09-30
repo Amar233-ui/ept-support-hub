@@ -296,7 +296,7 @@ def ensure_issues(repo: str, plan: dict, ms_titles: dict[str, str]) -> dict[str,
         if resolved != current:
             gh("issue", "edit", str(gi["number"]), "--repo", repo, "--body-file", "-", input_data=resolved)
         assignee = people[issue["assignee"]]
-        if not gi.get("new") and not any(a["login"] == assignee for a in gi.get("assignees", [])):
+        if not gi.get("new") and not any(a["login"].lower() == assignee.lower() for a in gi.get("assignees", [])):
             result = subprocess.run(
                 ["gh", "issue", "edit", str(gi["number"]), "--repo", repo, "--add-assignee", assignee],
                 capture_output=True,
@@ -304,7 +304,7 @@ def ensure_issues(repo: str, plan: dict, ms_titles: dict[str, str]) -> dict[str,
             )
             # GitHub silently ignores assignees who are not collaborators yet: verify.
             actual = gh_json("issue", "view", str(gi["number"]), "--repo", repo, "--json", "assignees")
-            if result.returncode == 0 and any(a["login"] == assignee for a in actual["assignees"]):
+            if result.returncode == 0 and any(a["login"].lower() == assignee.lower() for a in actual["assignees"]):
                 print(f"  ~ #{gi['number']} assignée à {assignee}")
             else:
                 pending.add(assignee)
