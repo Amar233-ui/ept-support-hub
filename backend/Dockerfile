@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------- dev: DevTools + recompilation of mounted sources (dev-entrypoint.sh) ----------
-FROM eclipse-temurin:21-jdk AS dev
+FROM eclipse-temurin:25-jdk AS dev
 WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
@@ -15,7 +15,7 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=180s --retries=10 \
 CMD ["./dev-entrypoint.sh"]
 
 # ---------- build ----------
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
@@ -25,7 +25,7 @@ RUN ./mvnw -q -B package -DskipTests \
     && java -Djarmode=tools -jar target/support-hub-*.jar extract --layers --launcher --destination extracted
 
 # ---------- prod: JRE only, non-root ----------
-FROM eclipse-temurin:21-jre AS prod
+FROM eclipse-temurin:25-jre AS prod
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --create-home app \
     && mkdir -p /data/storage && chown app /data/storage
