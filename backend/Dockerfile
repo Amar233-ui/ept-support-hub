@@ -1,16 +1,18 @@
 # syntax=docker/dockerfile:1
 
-# ---------- dev: hot reload via spring-boot:run on mounted sources ----------
+# ---------- dev: DevTools + recompilation of mounted sources (dev-entrypoint.sh) ----------
 FROM eclipse-temurin:21-jdk AS dev
 WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw && ./mvnw -q -B dependency:go-offline
 COPY src/ src/
+COPY dev-entrypoint.sh ./
+RUN chmod +x dev-entrypoint.sh
 EXPOSE 8080
-HEALTHCHECK --interval=10s --timeout=3s --start-period=120s --retries=10 \
+HEALTHCHECK --interval=10s --timeout=3s --start-period=180s --retries=10 \
   CMD curl -fs http://localhost:8080/api/actuator/health/liveness || exit 1
-CMD ["./mvnw", "-q", "-B", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-XX:TieredStopAtLevel=1"]
+CMD ["./dev-entrypoint.sh"]
 
 # ---------- build ----------
 FROM eclipse-temurin:21-jdk AS build
