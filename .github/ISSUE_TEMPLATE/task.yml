@@ -1,0 +1,16 @@
+name: Tâche technique
+description: Infra, refactor, outillage, documentation
+labels: ["type:task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes:
+      label: Définition de terminé
+      value: |
+        - [ ]
+    validations: { required: true }

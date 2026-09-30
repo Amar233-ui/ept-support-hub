@@ -1,0 +1,12 @@
+# Propriétaires par défaut : les deux binômes (toute PR peut être revue par l'autre)
+*                     @Amar233-ui @falloungom04
+
+/backend/             @Amar233-ui
+/infra/               @Amar233-ui
+/docker-compose.yml   @Amar233-ui
+/.github/workflows/   @Amar233-ui
+
+/frontend/            @falloungom04
+/ai-service/          @falloungom04
+/docs/design-system.md @falloungom04
+/docs/ai.md           @falloungom04

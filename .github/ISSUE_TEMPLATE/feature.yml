@@ -1,0 +1,27 @@
+name: Fonctionnalité
+description: Nouvelle fonctionnalité ou évolution
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte
+      description: Quel besoin utilisateur ? Quel rôle est concerné ?
+    validations: { required: true }
+  - type: textarea
+    id: scope
+    attributes:
+      label: Périmètre
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation
+      value: |
+        - [ ]
+    validations: { required: true }
+  - type: input
+    id: related
+    attributes:
+      label: Issues liées
+      placeholder: "#12 (back), #13 (front)"
