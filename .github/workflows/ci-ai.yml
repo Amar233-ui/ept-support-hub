@@ -36,7 +36,7 @@ jobs:
         working-directory: ai-service
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: ai-service/uv.lock
